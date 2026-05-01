@@ -22,6 +22,7 @@ interface VendingMachine {
   lng: number;
   note?: string;
   items?: string;
+  userId?: string;
 }
 
 interface Props {
@@ -45,7 +46,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       const { data, error } = await supabase
         .from("vending_machines")
         .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id })
-        .select("id, address, latitude, longitude, maker, items")
+        .select("id, address, latitude, longitude, maker, items, user_id")
         .single();
 
       if (error) {
@@ -55,7 +56,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       if (data) {
         const d = data as unknown as Record<string, unknown>;
         setMachines((prev) => [
-          { id: d.id as string, name: d["address"] as string, lat: d["latitude"] as number, lng: d["longitude"] as number, note: d["maker"] as string, items: d["items"] as string },
+          { id: d.id as string, name: d["address"] as string, lat: d["latitude"] as number, lng: d["longitude"] as number, note: d["maker"] as string, items: d["items"] as string, userId: d["user_id"] as string },
           ...prev,
         ]);
         showToast("自販機を登録しました！");
@@ -157,6 +158,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
         <VendingMap
           machines={machines}
           isLoggedIn={!!user}
+          currentUserId={user?.id ?? null}
           onAdd={handleAdd}
           onUpdate={handleUpdate}
           onDelete={handleDelete}

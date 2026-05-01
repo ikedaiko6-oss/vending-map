@@ -20,11 +20,13 @@ interface VendingMachine {
   lng: number;
   note?: string;
   items?: string;
+  userId?: string;
 }
 
 interface Props {
   machines: VendingMachine[];
   isLoggedIn: boolean;
+  currentUserId: string | null;
   onAdd: (lat: number, lng: number, name: string, note: string, items: string) => Promise<void>;
   onUpdate: (id: string, name: string, note: string, items: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -32,12 +34,12 @@ interface Props {
 
 function MachineMarker({
   machine,
-  isLoggedIn,
+  isOwner,
   onUpdate,
   onDelete,
 }: {
   machine: VendingMachine;
-  isLoggedIn: boolean;
+  isOwner: boolean;
   onUpdate: (id: string, name: string, note: string, items: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
@@ -82,7 +84,7 @@ function MachineMarker({
             ) : (
               <p className="text-xs text-gray-400 mt-1 italic">商品未登録</p>
             )}
-            {isLoggedIn && (
+            {isOwner && (
               <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100">
                 <button
                   onClick={() => { setOpen(false); setEditing(true); }}
@@ -144,7 +146,7 @@ function CurrentLocationButton({ onLocate }: { onLocate: (pos: { lat: number; ln
   );
 }
 
-export default function VendingMap({ machines, isLoggedIn, onAdd, onUpdate, onDelete }: Props) {
+export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd, onUpdate, onDelete }: Props) {
   const [pendingPos, setPendingPos] = useState<{ lat: number; lng: number } | null>(null);
   const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -177,7 +179,7 @@ export default function VendingMap({ machines, isLoggedIn, onAdd, onUpdate, onDe
           <MachineMarker
             key={m.id}
             machine={m}
-            isLoggedIn={isLoggedIn}
+            isOwner={!!currentUserId && m.userId === currentUserId}
             onUpdate={onUpdate}
             onDelete={onDelete}
           />
