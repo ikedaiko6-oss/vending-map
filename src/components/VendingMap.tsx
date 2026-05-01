@@ -179,7 +179,7 @@ export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd,
           <MachineMarker
             key={m.id}
             machine={m}
-            isOwner={!!currentUserId && m.userId === currentUserId}
+            isOwner={!!currentUserId && (!m.userId || m.userId === currentUserId)}
             onUpdate={onUpdate}
             onDelete={onDelete}
           />
