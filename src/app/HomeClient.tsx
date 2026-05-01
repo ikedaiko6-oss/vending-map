@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -33,8 +33,15 @@ interface Props {
 export default function HomeClient({ machines: initialMachines, user }: Props) {
   const [machines, setMachines] = useState(initialMachines);
   const [toast, setToast] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(user?.id ?? null);
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null);
+    });
+  }, [supabase]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -158,7 +165,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
         <VendingMap
           machines={machines}
           isLoggedIn={!!user}
-          currentUserId={user?.id ?? null}
+          currentUserId={currentUserId}
           onAdd={handleAdd}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
