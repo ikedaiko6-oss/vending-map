@@ -52,8 +52,13 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      showToast("ログインが必要です");
+      return null;
+    }
     const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user?.id}/${Date.now()}.${ext}`;
+    const path = `${authUser.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage
       .from("vending-machine-photos")
       .upload(path, file);
@@ -73,10 +78,11 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
         if (!imageUrl) return;
       }
 
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("vending_machines")
-        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id, image_url: imageUrl, photo_uploaded_at: imageUrl ? new Date().toISOString() : null })
-        .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at")
+        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id, image_url: imageUrl, ...(imageUrl ? { photo_uploaded_at: now } : {}) })
+        .select("id, address, latitude, longitude, maker, items, user_id, image_url")
         .single();
 
       if (error) {
@@ -94,7 +100,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
             note: d["maker"] as string,
             items: d["items"] as string,
             imageUrl: (d["image_url"] as string) ?? undefined,
-            photoUploadedAt: (d["photo_uploaded_at"] as string) ?? undefined,
+            photoUploadedAt: imageUrl ? now : undefined,
             userId: d["user_id"] as string,
           },
           ...prev,
@@ -115,17 +121,18 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
         imageUrl = uploaded;
       }
 
+      const now = new Date().toISOString();
       const updatePayload: Record<string, unknown> = { address: name, maker: note, items };
       if (imageUrl) {
         updatePayload.image_url = imageUrl;
-        updatePayload.photo_uploaded_at = new Date().toISOString();
+        updatePayload.photo_uploaded_at = now;
       }
 
       const { data, error } = await supabase
         .from("vending_machines")
         .update(updatePayload)
         .eq("id", id)
-        .select("id, address, latitude, longitude, maker, items, image_url, photo_uploaded_at")
+        .select("id, address, latitude, longitude, maker, items, image_url")
         .single();
 
       if (error) {
@@ -145,7 +152,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
                   note: d["maker"] as string,
                   items: d["items"] as string,
                   imageUrl: (d["image_url"] as string) ?? undefined,
-                  photoUploadedAt: (d["photo_uploaded_at"] as string) ?? undefined,
+                  photoUploadedAt: imageUrl ? now : m.photoUploadedAt,
                 }
               : m
           )
