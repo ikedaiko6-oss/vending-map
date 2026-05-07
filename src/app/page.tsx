@@ -10,7 +10,7 @@ export default async function Home() {
 
   const { data: rows } = await supabase
     .from("vending_machines")
-    .select("id, address, latitude, longitude, maker, items, user_id, image_url")
+    .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at")
     .order("created_at", { ascending: false });
 
   const machines = (rows as unknown as Record<string, unknown>[] ?? []).map((r) => ({
@@ -21,6 +21,7 @@ export default async function Home() {
     note: (r["maker"] as string) ?? "",
     items: (r["items"] as string) ?? "",
     imageUrl: (r["image_url"] as string) ?? undefined,
+    photoUploadedAt: (r["photo_uploaded_at"] as string) ?? undefined,
     userId: (r["user_id"] as string) ?? "",
   }));
 

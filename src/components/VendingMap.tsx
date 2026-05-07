@@ -21,6 +21,7 @@ interface VendingMachine {
   note?: string;
   items?: string;
   imageUrl?: string;
+  photoUploadedAt?: string;
   userId?: string;
 }
 
@@ -78,12 +79,19 @@ function MachineMarker({
         <InfoWindow anchor={marker} onClose={() => setOpen(false)}>
           <div className="p-1 w-[200px]">
             {machine.imageUrl && (
-              <img
-                src={machine.imageUrl}
-                alt={machine.name}
-                className="w-full h-28 object-cover rounded-lg mb-2 cursor-zoom-in"
-                onClick={() => setFullscreen(true)}
-              />
+              <>
+                <img
+                  src={machine.imageUrl}
+                  alt={machine.name}
+                  className="w-full h-28 object-cover rounded-lg mb-1 cursor-zoom-in"
+                  onClick={() => setFullscreen(true)}
+                />
+                {machine.photoUploadedAt && (
+                  <p className="text-xs text-gray-400 mb-2">
+                    📅 {new Date(machine.photoUploadedAt).toLocaleDateString("ja-JP")}
+                  </p>
+                )}
+              </>
             )}
             <p className="font-bold text-sm text-gray-800">{machine.name}</p>
             {machine.note && (

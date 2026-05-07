@@ -23,6 +23,7 @@ interface VendingMachine {
   note?: string;
   items?: string;
   imageUrl?: string;
+  photoUploadedAt?: string;
   userId?: string;
 }
 
@@ -74,8 +75,8 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
 
       const { data, error } = await supabase
         .from("vending_machines")
-        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id, image_url: imageUrl })
-        .select("id, address, latitude, longitude, maker, items, user_id, image_url")
+        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id, image_url: imageUrl, photo_uploaded_at: imageUrl ? new Date().toISOString() : null })
+        .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at")
         .single();
 
       if (error) {
@@ -93,6 +94,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
             note: d["maker"] as string,
             items: d["items"] as string,
             imageUrl: (d["image_url"] as string) ?? undefined,
+            photoUploadedAt: (d["photo_uploaded_at"] as string) ?? undefined,
             userId: d["user_id"] as string,
           },
           ...prev,
@@ -114,13 +116,16 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       }
 
       const updatePayload: Record<string, unknown> = { address: name, maker: note, items };
-      if (imageUrl) updatePayload.image_url = imageUrl;
+      if (imageUrl) {
+        updatePayload.image_url = imageUrl;
+        updatePayload.photo_uploaded_at = new Date().toISOString();
+      }
 
       const { data, error } = await supabase
         .from("vending_machines")
         .update(updatePayload)
         .eq("id", id)
-        .select("id, address, latitude, longitude, maker, items, image_url")
+        .select("id, address, latitude, longitude, maker, items, image_url, photo_uploaded_at")
         .single();
 
       if (error) {
@@ -140,6 +145,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
                   note: d["maker"] as string,
                   items: d["items"] as string,
                   imageUrl: (d["image_url"] as string) ?? undefined,
+                  photoUploadedAt: (d["photo_uploaded_at"] as string) ?? undefined,
                 }
               : m
           )
