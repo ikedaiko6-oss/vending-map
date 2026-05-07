@@ -89,10 +89,8 @@ function MachineMarker({
             {machine.note && (
               <p className="text-xs text-gray-500 mt-1">🏭 {machine.note}</p>
             )}
-            {machine.items ? (
-              <p className="text-xs text-gray-600 mt-1">🛒 {machine.items}</p>
-            ) : (
-              <p className="text-xs text-gray-400 mt-1 italic">商品未登録</p>
+            {machine.items && (
+              <p className="text-xs text-gray-600 mt-1">📝 {machine.items}</p>
             )}
             {isOwner && (
               <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100">
