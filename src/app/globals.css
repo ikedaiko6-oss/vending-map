@@ -12,3 +12,10 @@ body {
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+/* Google Maps Advanced Marker のデフォルト白背景を除去 */
+.gm-style-mf {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}

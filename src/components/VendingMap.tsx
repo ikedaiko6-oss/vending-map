@@ -71,8 +71,9 @@ function MachineMarker({
         ref={markerRef}
         position={{ lat: machine.lat, lng: machine.lng }}
         onClick={() => setOpen(true)}
+        style={{ background: 'none' }}
       >
-        <img src="/marker-vending.png" alt="自販機" className="w-10 h-10 drop-shadow cursor-pointer select-none" />
+        <img src="/marker-vending.png" alt="自販機" className="w-10 h-10 drop-shadow cursor-pointer select-none" style={{ display: 'block' }} />
       </AdvancedMarker>
 
       {open && (
