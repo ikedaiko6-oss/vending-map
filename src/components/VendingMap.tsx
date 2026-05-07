@@ -48,6 +48,7 @@ function MachineMarker({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const handleDelete = async () => {
     if (!confirm("この自販機を削除しますか？")) return;
@@ -80,7 +81,8 @@ function MachineMarker({
               <img
                 src={machine.imageUrl}
                 alt={machine.name}
-                className="w-full h-28 object-cover rounded-lg mb-2"
+                className="w-full h-28 object-cover rounded-lg mb-2 cursor-zoom-in"
+                onClick={() => setFullscreen(true)}
               />
             )}
             <p className="font-bold text-sm text-gray-800">{machine.name}</p>
@@ -119,6 +121,25 @@ function MachineMarker({
           onClose={() => setEditing(false)}
           onSave={handleEditSave}
         />
+      )}
+
+      {fullscreen && machine.imageUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setFullscreen(false)}
+        >
+          <img
+            src={machine.imageUrl}
+            alt={machine.name}
+            className="max-w-full max-h-full object-contain"
+          />
+          <button
+            className="absolute top-4 right-4 text-white text-3xl leading-none"
+            onClick={() => setFullscreen(false)}
+          >
+            ✕
+          </button>
+        </div>
       )}
     </>
   );
