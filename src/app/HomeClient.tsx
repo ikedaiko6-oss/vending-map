@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -22,6 +22,7 @@ interface VendingMachine {
   lng: number;
   note?: string;
   items?: string;
+  imageUrl?: string;
   userId?: string;
 }
 
@@ -35,25 +36,46 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(user?.id ?? null);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setCurrentUserId(data.user?.id ?? null);
     });
-  }, [supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${user?.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("vending-machine-photos")
+      .upload(path, file);
+    if (error) {
+      showToast("画像のアップロードに失敗しました: " + error.message);
+      return null;
+    }
+    const { data } = supabase.storage.from("vending-machine-photos").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const handleAdd = useCallback(
-    async (lat: number, lng: number, name: string, note: string, items: string) => {
+    async (lat: number, lng: number, name: string, note: string, items: string, imageFile: File | null) => {
+      let imageUrl: string | null = null;
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+        if (!imageUrl) return;
+      }
+
       const { data, error } = await supabase
         .from("vending_machines")
-        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id })
-        .select("id, address, latitude, longitude, maker, items, user_id")
+        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id, image_url: imageUrl })
+        .select("id, address, latitude, longitude, maker, items, user_id, image_url")
         .single();
 
       if (error) {
@@ -63,22 +85,42 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       if (data) {
         const d = data as unknown as Record<string, unknown>;
         setMachines((prev) => [
-          { id: d.id as string, name: d["address"] as string, lat: d["latitude"] as number, lng: d["longitude"] as number, note: d["maker"] as string, items: d["items"] as string, userId: d["user_id"] as string },
+          {
+            id: d.id as string,
+            name: d["address"] as string,
+            lat: d["latitude"] as number,
+            lng: d["longitude"] as number,
+            note: d["maker"] as string,
+            items: d["items"] as string,
+            imageUrl: (d["image_url"] as string) ?? undefined,
+            userId: d["user_id"] as string,
+          },
           ...prev,
         ]);
         showToast("自販機を登録しました！");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [supabase, user]
   );
 
   const handleUpdate = useCallback(
-    async (id: string, name: string, note: string, items: string) => {
+    async (id: string, name: string, note: string, items: string, imageFile: File | null) => {
+      let imageUrl: string | undefined;
+      if (imageFile) {
+        const uploaded = await uploadImage(imageFile);
+        if (!uploaded) return;
+        imageUrl = uploaded;
+      }
+
+      const updatePayload: Record<string, unknown> = { address: name, maker: note, items };
+      if (imageUrl) updatePayload.image_url = imageUrl;
+
       const { data, error } = await supabase
         .from("vending_machines")
-        .update({ address: name, maker: note, items })
+        .update(updatePayload)
         .eq("id", id)
-        .select("id, address, latitude, longitude, maker, items")
+        .select("id, address, latitude, longitude, maker, items, image_url")
         .single();
 
       if (error) {
@@ -90,13 +132,22 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
         setMachines((prev) =>
           prev.map((m) =>
             m.id === id
-              ? { id: d.id as string, name: d["address"] as string, lat: d["latitude"] as number, lng: d["longitude"] as number, note: d["maker"] as string, items: d["items"] as string }
+              ? {
+                  id: d.id as string,
+                  name: d["address"] as string,
+                  lat: d["latitude"] as number,
+                  lng: d["longitude"] as number,
+                  note: d["maker"] as string,
+                  items: d["items"] as string,
+                  imageUrl: (d["image_url"] as string) ?? undefined,
+                }
               : m
           )
         );
         showToast("更新しました！");
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [supabase]
   );
 
@@ -170,7 +221,6 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
           onUpdate={handleUpdate}
           onDelete={handleDelete}
         />
-
       </div>
 
       {/* フッター */}

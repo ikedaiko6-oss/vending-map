@@ -20,6 +20,7 @@ interface VendingMachine {
   lng: number;
   note?: string;
   items?: string;
+  imageUrl?: string;
   userId?: string;
 }
 
@@ -27,8 +28,8 @@ interface Props {
   machines: VendingMachine[];
   isLoggedIn: boolean;
   currentUserId: string | null;
-  onAdd: (lat: number, lng: number, name: string, note: string, items: string) => Promise<void>;
-  onUpdate: (id: string, name: string, note: string, items: string) => Promise<void>;
+  onAdd: (lat: number, lng: number, name: string, note: string, items: string, imageFile: File | null) => Promise<void>;
+  onUpdate: (id: string, name: string, note: string, items: string, imageFile: File | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -40,7 +41,7 @@ function MachineMarker({
 }: {
   machine: VendingMachine;
   isOwner: boolean;
-  onUpdate: (id: string, name: string, note: string, items: string) => Promise<void>;
+  onUpdate: (id: string, name: string, note: string, items: string, imageFile: File | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const [markerRef, marker] = useAdvancedMarkerRef();
@@ -56,8 +57,8 @@ function MachineMarker({
     setOpen(false);
   };
 
-  const handleEditSave = async (id: string, name: string, note: string, items: string) => {
-    await onUpdate(id, name, note, items);
+  const handleEditSave = async (id: string, name: string, note: string, items: string, imageFile: File | null) => {
+    await onUpdate(id, name, note, items, imageFile);
     setEditing(false);
     setOpen(false);
   };
@@ -74,7 +75,14 @@ function MachineMarker({
 
       {open && (
         <InfoWindow anchor={marker} onClose={() => setOpen(false)}>
-          <div className="p-1 max-w-[220px]">
+          <div className="p-1 w-[200px]">
+            {machine.imageUrl && (
+              <img
+                src={machine.imageUrl}
+                alt={machine.name}
+                className="w-full h-28 object-cover rounded-lg mb-2"
+              />
+            )}
             <p className="font-bold text-sm text-gray-800">{machine.name}</p>
             {machine.note && (
               <p className="text-xs text-gray-500 mt-1">🏭 {machine.note}</p>
@@ -158,9 +166,9 @@ export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd,
     [isLoggedIn]
   );
 
-  const handleSave = async (name: string, note: string, items: string) => {
+  const handleSave = async (name: string, note: string, items: string, imageFile: File | null) => {
     if (!pendingPos) return;
-    await onAdd(pendingPos.lat, pendingPos.lng, name, note, items);
+    await onAdd(pendingPos.lat, pendingPos.lng, name, note, items, imageFile);
     setPendingPos(null);
   };
 
