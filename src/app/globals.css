@@ -1,7 +1,17 @@
 @import "tailwindcss";
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+}
+
+/* iOSでinput/textareaにフォーカスしたとき自動ズームしない（16px未満で発動するOSの挙動を防ぐ） */
+input, textarea, select {
+  font-size: 16px;
 }
 
 @keyframes fade-in {

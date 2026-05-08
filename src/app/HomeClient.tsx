@@ -183,7 +183,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-dvh">
       {/* ヘッダー */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b shadow-sm z-10">
         <div className="flex items-center gap-2">
