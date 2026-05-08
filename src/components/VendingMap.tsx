@@ -53,16 +53,27 @@ function MachineMarker({
 
   useEffect(() => {
     if (!marker?.element) return;
-    const el = marker.element as HTMLElement;
-    const strip = (e: HTMLElement) => {
-      e.style.background = 'none';
-      e.style.boxShadow = 'none';
-      e.style.border = 'none';
-      e.style.padding = '0';
+
+    const strip = (e: HTMLElement | null) => {
+      if (!e) return;
+      e.style.setProperty('background', 'none', 'important');
+      e.style.setProperty('background-color', 'transparent', 'important');
+      e.style.setProperty('box-shadow', 'none', 'important');
+      e.style.setProperty('border', 'none', 'important');
+      e.style.setProperty('padding', '0', 'important');
     };
-    strip(el);
-    if (el.parentElement) strip(el.parentElement);
-    if (el.parentElement?.parentElement) strip(el.parentElement.parentElement);
+
+    const apply = () => {
+      const el = marker.element as HTMLElement;
+      strip(el);
+      Array.from(el.children).forEach(c => strip(c as HTMLElement));
+      strip(el.parentElement);
+      strip(el.parentElement?.parentElement ?? null);
+    };
+
+    apply();
+    const t = setTimeout(apply, 300);
+    return () => clearTimeout(t);
   }, [marker]);
 
   const handleDelete = async () => {

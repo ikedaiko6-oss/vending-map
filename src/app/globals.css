@@ -14,6 +14,17 @@ input, textarea, select {
   font-size: 16px;
 }
 
+/* AdvancedMarker カスタムコンテンツのグレー背景を除去 */
+gmp-advanced-marker,
+gmp-advanced-marker > div,
+.gm-style-mf,
+.gm-style-mf > div {
+  background: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
 @keyframes fade-in {
   from { opacity: 0; transform: translate(-50%, 8px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
