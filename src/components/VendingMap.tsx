@@ -8,7 +8,7 @@ import {
   useAdvancedMarkerRef,
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 import AddMachineModal from "./AddMachineModal";
 import EditMachineModal from "./EditMachineModal";
@@ -50,6 +50,20 @@ function MachineMarker({
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!marker?.element) return;
+    const el = marker.element as HTMLElement;
+    const strip = (e: HTMLElement) => {
+      e.style.background = 'none';
+      e.style.boxShadow = 'none';
+      e.style.border = 'none';
+      e.style.padding = '0';
+    };
+    strip(el);
+    if (el.parentElement) strip(el.parentElement);
+    if (el.parentElement?.parentElement) strip(el.parentElement.parentElement);
+  }, [marker]);
 
   const handleDelete = async () => {
     if (!confirm("この自販機を削除しますか？")) return;
@@ -215,7 +229,7 @@ export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd,
           <MachineMarker
             key={m.id}
             machine={m}
-            isOwner={!!currentUserId && (!m.userId || m.userId === currentUserId)}
+            isOwner={!!currentUserId && m.userId === currentUserId}
             onUpdate={onUpdate}
             onDelete={onDelete}
           />
