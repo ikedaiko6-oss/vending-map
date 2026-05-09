@@ -72,26 +72,7 @@ function MachineMarker({
     };
 
     apply();
-    const t = setTimeout(() => {
-      apply();
-      // DEBUG: グレー背景の原因を特定するための一時的なログ
-      const el = marker.element as HTMLElement;
-      const logEl = (label: string, e: HTMLElement | null) => {
-        if (!e) return;
-        const cs = window.getComputedStyle(e);
-        console.log(`[Marker DEBUG] ${label}`, {
-          tag: e.tagName,
-          className: e.className,
-          inlineStyle: e.getAttribute('style'),
-          computedBg: cs.backgroundColor,
-          computedBoxShadow: cs.boxShadow,
-        });
-      };
-      logEl('marker.element (gmp-advanced-marker)', el);
-      Array.from(el.children).forEach((c, i) => logEl(`child[${i}]`, c as HTMLElement));
-      logEl('parentElement', el.parentElement);
-      logEl('grandparentElement', el.parentElement?.parentElement ?? null);
-    }, 500);
+    const t = setTimeout(apply, 300);
     return () => clearTimeout(t);
   }, [marker]);
 

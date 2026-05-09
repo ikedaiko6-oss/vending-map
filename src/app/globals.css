@@ -18,9 +18,9 @@ input, textarea, select {
 gmp-advanced-marker,
 gmp-advanced-marker > div,
 .gm-style-mf,
-.gm-style-mf > div {
-  background: none !important;
-  background-color: transparent !important;
+.gm-style-mf > div,
+.IPAZAH-content-container {
+  background: transparent !important;
   box-shadow: none !important;
   border: none !important;
 }
