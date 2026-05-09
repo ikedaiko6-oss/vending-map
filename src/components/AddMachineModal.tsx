@@ -20,24 +20,36 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    console.log("[Geocode] useEffect fired", { lat, lng });
     setAddressLoading(true);
     try {
-      // APIProvider がロード済みの Maps JS API Geocoder を使う
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const g = (window as any).google;
+      console.log("[Geocode] window.google =", g);
+      console.log("[Geocode] window.google.maps =", g?.maps);
+      console.log("[Geocode] Geocoder =", g?.maps?.Geocoder);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const geocoder = new (window as any).google.maps.Geocoder();
+      console.log("[Geocode] geocoder instance created:", geocoder);
+
       geocoder.geocode(
         { location: { lat, lng } },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (results: any[], status: string) => {
+          console.log("[Geocode] callback fired — status:", status, "results:", results);
           if (status === "OK" && results?.[0]) {
             let address: string = results[0].formatted_address;
+            console.log("[Geocode] raw address:", address);
             address = address.replace(/^日本、〒\d{3}-\d{4}\s*/, "").replace(/^日本、/, "");
+            console.log("[Geocode] cleaned address:", address);
             setName(address);
           }
           setAddressLoading(false);
         }
       );
-    } catch {
+    } catch (err) {
+      console.error("[Geocode] caught error:", err);
       setAddressLoading(false);
     }
   }, [lat, lng]);
