@@ -20,25 +20,26 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const geocode = async () => {
-      setAddressLoading(true);
-      try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=ja&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-        );
-        const data = await res.json();
-        if (data.status === "OK" && data.results[0]) {
-          let address: string = data.results[0].formatted_address;
-          address = address.replace(/^日本、〒\d{3}-\d{4}\s*/, "").replace(/^日本、/, "");
-          setName(address);
+    setAddressLoading(true);
+    try {
+      // APIProvider がロード済みの Maps JS API Geocoder を使う
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const geocoder = new (window as any).google.maps.Geocoder();
+      geocoder.geocode(
+        { location: { lat, lng } },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (results: any[], status: string) => {
+          if (status === "OK" && results?.[0]) {
+            let address: string = results[0].formatted_address;
+            address = address.replace(/^日本、〒\d{3}-\d{4}\s*/, "").replace(/^日本、/, "");
+            setName(address);
+          }
+          setAddressLoading(false);
         }
-      } catch {
-        // ジオコーディング失敗時はユーザーが手入力
-      } finally {
-        setAddressLoading(false);
-      }
-    };
-    geocode();
+      );
+    } catch {
+      setAddressLoading(false);
+    }
   }, [lat, lng]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +50,7 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !imageFile) return;
+    if (!imageFile) return;
     setSaving(true);
     await onSave(name.trim(), note.trim(), items.trim(), imageFile);
     setSaving(false);
@@ -66,7 +67,7 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                住所 <span className="text-red-500">*</span>
+                住所（任意）
               </label>
               {addressLoading ? (
                 <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50">
@@ -80,7 +81,6 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
                   placeholder="例：東京都渋谷区道玄坂1丁目"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   maxLength={100}
-                  required
                 />
               )}
             </div>
@@ -156,7 +156,7 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
               </button>
               <button
                 type="submit"
-                disabled={saving || !name.trim() || !imageFile}
+                disabled={saving || !imageFile}
                 className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
               >
                 {saving ? "登録中..." : "登録する"}
