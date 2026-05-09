@@ -121,7 +121,7 @@ function MachineMarker({
             )}
             <p className="font-bold text-sm text-gray-800">{machine.name}</p>
             {machine.note && (
-              <p className="text-xs text-gray-500 mt-1">🏭 {machine.note}</p>
+              <p className="text-xs text-gray-500 mt-1">📌 {machine.note}</p>
             )}
             {machine.items && (
               <p className="text-xs text-gray-600 mt-1">📝 {machine.items}</p>

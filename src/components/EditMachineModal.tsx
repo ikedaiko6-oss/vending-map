@@ -66,13 +66,13 @@ export default function EditMachineModal({ machine, onClose, onSave }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              メーカー（任意）
+              場所の特徴（任意）
             </label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="例：アサヒ、コカ・コーラ"
+              placeholder="例：コインランドリー隣り、駐車場の角"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={100}
             />
