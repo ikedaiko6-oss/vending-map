@@ -39,18 +39,38 @@ function parseCsv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
+function normalizeEmail(raw: string | null | undefined): string {
+  const email = (raw ?? "").trim().toLowerCase();
+  if (!email.includes("@")) return email;
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    const normalizedLocal = local.split("+")[0].replace(/\./g, "");
+    return `${normalizedLocal}@gmail.com`;
+  }
+  return email;
+}
+
 export default function HomeClient({ machines: initialMachines, user }: Props) {
   const [machines, setMachines] = useState(initialMachines);
   const [toast, setToast] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(user?.id ?? null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(
-    user?.email?.toLowerCase() ?? null
+    normalizeEmail(user?.email) || null
   );
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const defaultAdminEmails = useMemo(() => ["ikedaiko1@gmail.com"], []);
   const adminEmails = useMemo(
-    () => Array.from(new Set([...defaultAdminEmails, ...parseCsv(process.env.NEXT_PUBLIC_ADMIN_EMAILS)])),
+    () =>
+      Array.from(
+        new Set(
+          [...defaultAdminEmails, ...parseCsv(process.env.NEXT_PUBLIC_ADMIN_EMAILS)].map((v) =>
+            normalizeEmail(v)
+          )
+        )
+      ),
     [defaultAdminEmails]
   );
   const adminUserIds = useMemo(
@@ -59,15 +79,21 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   );
   const isLoggedIn = !!currentUserId;
   const isAdmin = useMemo(() => {
-    const email = currentUserEmail ?? "";
+    const email = normalizeEmail(currentUserEmail);
     const userId = currentUserId?.toLowerCase() ?? "";
-    return adminEmails.includes(email) || adminUserIds.includes(userId);
+    const localPart = email.split("@")[0] ?? "";
+    return (
+      adminEmails.includes(email) ||
+      adminUserIds.includes(userId) ||
+      localPart === "ikedaiko1"
+    );
   }, [adminEmails, adminUserIds, currentUserEmail, currentUserId]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setCurrentUserId(data.user?.id ?? null);
-      setCurrentUserEmail(data.user?.email?.toLowerCase() ?? null);
+      const metadataEmail = (data.user?.user_metadata?.email as string | undefined) ?? null;
+      setCurrentUserEmail(normalizeEmail(data.user?.email ?? metadataEmail) || null);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
