@@ -43,25 +43,31 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   const [machines, setMachines] = useState(initialMachines);
   const [toast, setToast] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(user?.id ?? null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(
+    user?.email?.toLowerCase() ?? null
+  );
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const defaultAdminEmails = useMemo(() => ["ikedaiko1@gmail.com"], []);
   const adminEmails = useMemo(
-    () => parseCsv(process.env.NEXT_PUBLIC_ADMIN_EMAILS),
-    []
+    () => Array.from(new Set([...defaultAdminEmails, ...parseCsv(process.env.NEXT_PUBLIC_ADMIN_EMAILS)])),
+    [defaultAdminEmails]
   );
   const adminUserIds = useMemo(
     () => parseCsv(process.env.NEXT_PUBLIC_ADMIN_USER_IDS),
     []
   );
+  const isLoggedIn = !!currentUserId;
   const isAdmin = useMemo(() => {
-    const email = user?.email?.toLowerCase() ?? "";
-    const userId = user?.id?.toLowerCase() ?? "";
+    const email = currentUserEmail ?? "";
+    const userId = currentUserId?.toLowerCase() ?? "";
     return adminEmails.includes(email) || adminUserIds.includes(userId);
-  }, [adminEmails, adminUserIds, user]);
+  }, [adminEmails, adminUserIds, currentUserEmail, currentUserId]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setCurrentUserId(data.user?.id ?? null);
+      setCurrentUserEmail(data.user?.email?.toLowerCase() ?? null);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -214,10 +220,10 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {user ? (
+          {isLoggedIn ? (
             <>
               <span className="text-xs text-gray-500 hidden sm:block">
-                {user.email}
+                {currentUserEmail ?? user?.email ?? ""}
               </span>
               {isAdmin && (
                 <span className="text-[10px] text-purple-700 bg-purple-100 border border-purple-200 rounded-full px-2 py-0.5">
@@ -243,7 +249,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       </header>
 
       {/* 操作ガイド */}
-      {user && (
+      {isLoggedIn && (
         <div className="bg-blue-50 border-b border-blue-100 px-4 py-1.5 text-xs text-blue-600 text-center">
           地図をタップ・クリックして自販機を登録できます
         </div>
@@ -253,7 +259,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       <div className="flex-1 relative">
         <VendingMap
           machines={machines}
-          isLoggedIn={!!user}
+          isLoggedIn={isLoggedIn}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
           onAdd={handleAdd}
