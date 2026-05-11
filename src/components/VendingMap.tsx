@@ -226,7 +226,7 @@ export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd,
   };
 
   return (
-    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} language="ja" region="JP">
       <Map
         mapId="vending-map"
         defaultCenter={{ lat: 35.6812, lng: 139.7671 }}

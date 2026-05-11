@@ -20,7 +20,6 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setAddressLoading(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const geocoder = new (window as any).google.maps.Geocoder();
@@ -37,7 +36,7 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
         }
       );
     } catch {
-      setAddressLoading(false);
+      queueMicrotask(() => setAddressLoading(false));
     }
   }, [lat, lng]);
 

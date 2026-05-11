@@ -8,10 +8,16 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
+    const isLocalhost =
+      location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    const redirectTo = isLocalhost
+      ? "http://localhost:3000/auth/callback"
+      : `${location.origin}/auth/callback`;
+
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        redirectTo,
         queryParams: { prompt: "select_account" },
       },
     });
