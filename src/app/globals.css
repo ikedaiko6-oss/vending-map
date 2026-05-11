@@ -25,6 +25,16 @@ gmp-advanced-marker > div,
   border: none !important;
 }
 
+/* Maps内部ラッパーの背景色が出るケースを追加で抑止 */
+.vending-advanced-marker,
+.vending-advanced-marker img,
+.gm-style .vending-advanced-marker,
+.gm-style .vending-advanced-marker > div {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
 @keyframes fade-in {
   from { opacity: 0; transform: translate(-50%, 8px); }
   to   { opacity: 1; transform: translate(-50%, 0); }

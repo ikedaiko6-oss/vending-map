@@ -32,12 +32,32 @@ interface Props {
   user: User | null;
 }
 
+function parseCsv(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export default function HomeClient({ machines: initialMachines, user }: Props) {
   const [machines, setMachines] = useState(initialMachines);
   const [toast, setToast] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(user?.id ?? null);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const adminEmails = useMemo(
+    () => parseCsv(process.env.NEXT_PUBLIC_ADMIN_EMAILS),
+    []
+  );
+  const adminUserIds = useMemo(
+    () => parseCsv(process.env.NEXT_PUBLIC_ADMIN_USER_IDS),
+    []
+  );
+  const isAdmin = useMemo(() => {
+    const email = user?.email?.toLowerCase() ?? "";
+    const userId = user?.id?.toLowerCase() ?? "";
+    return adminEmails.includes(email) || adminUserIds.includes(userId);
+  }, [adminEmails, adminUserIds, user]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -199,6 +219,11 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
               <span className="text-xs text-gray-500 hidden sm:block">
                 {user.email}
               </span>
+              {isAdmin && (
+                <span className="text-[10px] text-purple-700 bg-purple-100 border border-purple-200 rounded-full px-2 py-0.5">
+                  管理者
+                </span>
+              )}
               <button
                 onClick={handleSignOut}
                 className="text-xs text-gray-500 border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
@@ -230,6 +255,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
           machines={machines}
           isLoggedIn={!!user}
           currentUserId={currentUserId}
+          isAdmin={isAdmin}
           onAdd={handleAdd}
           onUpdate={handleUpdate}
           onDelete={handleDelete}

@@ -29,6 +29,7 @@ interface Props {
   machines: VendingMachine[];
   isLoggedIn: boolean;
   currentUserId: string | null;
+  isAdmin: boolean;
   onAdd: (lat: number, lng: number, name: string, note: string, items: string, imageFile: File | null) => Promise<void>;
   onUpdate: (id: string, name: string, note: string, items: string, imageFile: File | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -36,12 +37,12 @@ interface Props {
 
 function MachineMarker({
   machine,
-  isOwner,
+  canManage,
   onUpdate,
   onDelete,
 }: {
   machine: VendingMachine;
-  isOwner: boolean;
+  canManage: boolean;
   onUpdate: (id: string, name: string, note: string, items: string, imageFile: File | null) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
@@ -61,14 +62,20 @@ function MachineMarker({
       e.style.setProperty('box-shadow', 'none', 'important');
       e.style.setProperty('border', 'none', 'important');
       e.style.setProperty('padding', '0', 'important');
+      e.style.setProperty('outline', 'none', 'important');
     };
 
     const apply = () => {
       const el = marker.element as HTMLElement;
       strip(el);
       Array.from(el.children).forEach(c => strip(c as HTMLElement));
-      strip(el.parentElement);
-      strip(el.parentElement?.parentElement ?? null);
+      let parent: HTMLElement | null = el.parentElement;
+      let depth = 0;
+      while (parent && depth < 6) {
+        strip(parent);
+        parent = parent.parentElement;
+        depth += 1;
+      }
     };
 
     apply();
@@ -96,9 +103,15 @@ function MachineMarker({
         ref={markerRef}
         position={{ lat: machine.lat, lng: machine.lng }}
         onClick={() => setOpen(true)}
-        style={{ background: 'none' }}
+        className="vending-advanced-marker"
+        style={{ background: "none", backgroundColor: "transparent", border: "none", boxShadow: "none", padding: 0 }}
       >
-        <img src="/marker-vending.png" alt="自販機" className="w-10 h-10 drop-shadow cursor-pointer select-none" style={{ display: 'block' }} />
+        <img
+          src="/marker-vending.svg"
+          alt="自販機"
+          className="w-10 h-10 drop-shadow cursor-pointer select-none"
+          style={{ display: "block", background: "transparent" }}
+        />
       </AdvancedMarker>
 
       {open && (
@@ -126,7 +139,7 @@ function MachineMarker({
             {machine.items && (
               <p className="text-xs text-gray-600 mt-1">📝 {machine.items}</p>
             )}
-            {isOwner && (
+            {canManage && (
               <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100">
                 <button
                   onClick={() => { setOpen(false); setEditing(true); }}
@@ -207,7 +220,7 @@ function CurrentLocationButton({ onLocate }: { onLocate: (pos: { lat: number; ln
   );
 }
 
-export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd, onUpdate, onDelete }: Props) {
+export default function VendingMap({ machines, isLoggedIn, currentUserId, isAdmin, onAdd, onUpdate, onDelete }: Props) {
   const [pendingPos, setPendingPos] = useState<{ lat: number; lng: number } | null>(null);
   const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -240,7 +253,7 @@ export default function VendingMap({ machines, isLoggedIn, currentUserId, onAdd,
           <MachineMarker
             key={m.id}
             machine={m}
-            isOwner={!!currentUserId && m.userId === currentUserId}
+            canManage={isAdmin || (!!currentUserId && m.userId === currentUserId)}
             onUpdate={onUpdate}
             onDelete={onDelete}
           />

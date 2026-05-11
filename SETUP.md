@@ -8,6 +8,8 @@
 NEXT_PUBLIC_SUPABASE_URL=     ← SupabaseダッシュボードのProject URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY= ← anon/public キー
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY= ← Google Maps APIキー
+NEXT_PUBLIC_ADMIN_EMAILS=ikedaiko1@gmail.com,ikedaiko6@gmail.com
+NEXT_PUBLIC_ADMIN_USER_IDS=uuid1,uuid2
 ```
 
 ---
@@ -46,11 +48,17 @@ CREATE POLICY "ログイン済みが登録可" ON vending_machines
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 -- 自分が登録した自販機だけ削除・編集できる（任意）
-CREATE POLICY "自分の自販機を編集可" ON vending_machines
-  FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "自分または管理者が編集可" ON vending_machines
+  FOR UPDATE USING (
+    auth.uid() = user_id
+    OR lower(auth.jwt() ->> 'email') IN ('ikedaiko1@gmail.com', 'ikedaiko6@gmail.com')
+  );
 
-CREATE POLICY "自分の自販機を削除可" ON vending_machines
-  FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "自分または管理者が削除可" ON vending_machines
+  FOR DELETE USING (
+    auth.uid() = user_id
+    OR lower(auth.jwt() ->> 'email') IN ('ikedaiko1@gmail.com', 'ikedaiko6@gmail.com')
+  );
 ```
 
 ### 2-3. Google OAuth の設定
