@@ -1,29 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import HomeClient from "./HomeClient";
 
-export default async function Home() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: rows } = await supabase
-    .from("vending_machines")
-    .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at")
-    .order("created_at", { ascending: false });
-
-  const machines = (rows as unknown as Record<string, unknown>[] ?? []).map((r) => ({
-    id: r["id"] as string,
-    name: (r["address"] as string) ?? "",
-    lat: r["latitude"] as number,
-    lng: r["longitude"] as number,
-    note: (r["maker"] as string) ?? "",
-    items: (r["items"] as string) ?? "",
-    imageUrl: (r["image_url"] as string) ?? undefined,
-    photoUploadedAt: (r["photo_uploaded_at"] as string) ?? undefined,
-    userId: (r["user_id"] as string) ?? "",
-  }));
-
-  return <HomeClient machines={machines} user={user} />;
+export default function Home() {
+  return <HomeClient machines={[]} user={null} />;
 }

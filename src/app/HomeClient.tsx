@@ -52,9 +52,24 @@ function normalizeEmail(raw: string | null | undefined): string {
   return email;
 }
 
+function mapMachineRow(row: Record<string, unknown>): VendingMachine {
+  return {
+    id: row.id as string,
+    name: (row.address as string) ?? "",
+    lat: row.latitude as number,
+    lng: row.longitude as number,
+    note: (row.maker as string) ?? "",
+    items: (row.items as string) ?? "",
+    imageUrl: (row.image_url as string) ?? undefined,
+    photoUploadedAt: (row.photo_uploaded_at as string) ?? undefined,
+    userId: (row.user_id as string) ?? "",
+  };
+}
+
 export default function HomeClient({ machines: initialMachines, user }: Props) {
   const [machines, setMachines] = useState(initialMachines);
   const [toast, setToast] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(user?.id ?? null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(
     normalizeEmail(user?.email) || null
@@ -90,11 +105,40 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   }, [adminEmails, adminUserIds, currentUserEmail, currentUserId]);
 
   useEffect(() => {
+    const applyUser = (nextUser: User | null) => {
+      setCurrentUserId(nextUser?.id ?? null);
+      const metadataEmail = (nextUser?.user_metadata?.email as string | undefined) ?? null;
+      setCurrentUserEmail(normalizeEmail(nextUser?.email ?? metadataEmail) || null);
+    };
+
     supabase.auth.getUser().then(({ data }) => {
-      setCurrentUserId(data.user?.id ?? null);
-      const metadataEmail = (data.user?.user_metadata?.email as string | undefined) ?? null;
-      setCurrentUserEmail(normalizeEmail(data.user?.email ?? metadataEmail) || null);
+      applyUser(data.user);
+      setAuthLoading(false);
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    supabase
+      .from("vending_machines")
+      .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          showToast("自販機データの取得に失敗しました: " + error.message);
+          return;
+        }
+        setMachines(((data as unknown as Record<string, unknown>[]) ?? []).map(mapMachineRow));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -133,7 +177,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("vending_machines")
-        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: user?.id, image_url: imageUrl, ...(imageUrl ? { photo_uploaded_at: now } : {}) })
+        .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: currentUserId, image_url: imageUrl, ...(imageUrl ? { photo_uploaded_at: now } : {}) })
         .select("id, address, latitude, longitude, maker, items, user_id, image_url")
         .single();
 
@@ -161,7 +205,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [supabase, user]
+    [supabase, currentUserId]
   );
 
   const handleUpdate = useCallback(
@@ -246,7 +290,11 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {isLoggedIn ? (
+          {authLoading ? (
+            <span className="text-xs text-gray-400 bg-gray-100 rounded-lg px-3 py-1.5">
+              確認中...
+            </span>
+          ) : isLoggedIn ? (
             <>
               <span className="text-xs text-gray-500 hidden sm:block">
                 {currentUserEmail ?? user?.email ?? ""}
