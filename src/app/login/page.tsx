@@ -4,6 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const LOGIN_FAILED_MESSAGE = "ログインに失敗しました。もう一度お試しください。";
+const PRODUCTION_SITE_URL = "https://vending-map-zeta.vercel.app";
+
+function getAuthCallbackUrl() {
+  const isLocalhost =
+    location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PRODUCTION_SITE_URL;
+  const origin = isLocalhost ? location.origin : siteUrl;
+
+  return `${origin.replace(/\/$/, "")}/auth/callback`;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,16 +32,10 @@ export default function LoginPage() {
 
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
-    const isLocalhost =
-      location.hostname === "localhost" || location.hostname === "127.0.0.1";
-    const redirectTo = isLocalhost
-      ? "http://localhost:3000/auth/callback"
-      : `${location.origin}/auth/callback`;
-
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo,
+        redirectTo: getAuthCallbackUrl(),
         queryParams: { prompt: "select_account" },
       },
     });
