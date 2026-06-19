@@ -8,10 +8,11 @@ import {
   useAdvancedMarkerRef,
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 import AddMachineModal from "./AddMachineModal";
 import EditMachineModal from "./EditMachineModal";
+import { parseMachineItems } from "@/lib/machineTags";
 
 interface VendingMachine {
   id: string;
@@ -51,6 +52,7 @@ function MachineMarker({
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const parsedItems = parseMachineItems(machine.items);
 
   useEffect(() => {
     if (!marker?.element) return;
@@ -136,8 +138,20 @@ function MachineMarker({
             {machine.note && (
               <p className="text-xs text-gray-500 mt-1">📌 {machine.note}</p>
             )}
-            {machine.items && (
-              <p className="text-xs text-gray-600 mt-1">📝 {machine.items}</p>
+            {parsedItems.tagLabels.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {parsedItems.tagLabels.map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
+            {parsedItems.memo && (
+              <p className="text-xs text-gray-600 mt-2 whitespace-pre-wrap">📝 {parsedItems.memo}</p>
             )}
             {canManage && (
               <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100">
@@ -193,29 +207,84 @@ function MachineMarker({
 function CurrentLocationButton({ onLocate }: { onLocate: (pos: { lat: number; lng: number }) => void }) {
   const map = useMap();
   const [locating, setLocating] = useState(false);
+  const [tracking, setTracking] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+  const interactingUntilRef = useRef(0);
+
+  const stopTracking = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setLocating(false);
+    setTracking(false);
+  }, []);
+
+  useEffect(() => stopTracking, [stopTracking]);
+
+  useEffect(() => {
+    if (!map) return;
+
+    const mapDiv = map.getDiv();
+    const pauseAutoPan = () => {
+      interactingUntilRef.current = Date.now() + 1200;
+    };
+
+    mapDiv.addEventListener("pointerdown", pauseAutoPan, { passive: true });
+    mapDiv.addEventListener("pointermove", pauseAutoPan, { passive: true });
+    mapDiv.addEventListener("wheel", pauseAutoPan, { passive: true });
+    mapDiv.addEventListener("touchstart", pauseAutoPan, { passive: true });
+    mapDiv.addEventListener("touchmove", pauseAutoPan, { passive: true });
+
+    return () => {
+      mapDiv.removeEventListener("pointerdown", pauseAutoPan);
+      mapDiv.removeEventListener("pointermove", pauseAutoPan);
+      mapDiv.removeEventListener("wheel", pauseAutoPan);
+      mapDiv.removeEventListener("touchstart", pauseAutoPan);
+      mapDiv.removeEventListener("touchmove", pauseAutoPan);
+    };
+  }, [map]);
 
   const handleLocate = () => {
     if (!navigator.geolocation) return;
+
+    if (watchIdRef.current !== null) {
+      stopTracking();
+      return;
+    }
+
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
+    setTracking(true);
+    watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        map?.panTo({ lat, lng });
-        map?.setZoom(17);
+        if (Date.now() > interactingUntilRef.current) {
+          map?.panTo({ lat, lng });
+        }
         onLocate({ lat, lng });
         setLocating(false);
       },
-      () => setLocating(false)
+      () => stopTracking(),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 10000,
+      }
     );
   };
 
   return (
     <button
       onClick={handleLocate}
-      className="absolute bottom-8 right-4 z-10 bg-white rounded-full shadow-lg w-12 h-12 flex items-center justify-center text-xl hover:bg-gray-50 transition"
-      title="現在地"
+      className={`absolute bottom-8 right-4 z-10 rounded-full shadow-lg min-w-12 h-12 px-3 flex items-center justify-center gap-1 text-sm font-medium transition ${
+        tracking
+          ? "bg-blue-600 text-white hover:bg-blue-700"
+          : "bg-white text-gray-800 hover:bg-gray-50"
+      }`}
+      title={tracking ? "現在地追従を停止" : "現在地を追従"}
     >
-      {locating ? "⏳" : "📍"}
+      <span className="text-xl">{locating ? "⏳" : "📍"}</span>
+      {tracking && <span>追従中</span>}
     </button>
   );
 }

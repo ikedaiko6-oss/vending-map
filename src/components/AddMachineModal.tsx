@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { MACHINE_TAG_OPTIONS, formatMachineItems, type MachineTagId } from "@/lib/machineTags";
+import PhotoBlurEditor from "./PhotoBlurEditor";
 
 interface Props {
   lat: number;
@@ -13,8 +15,11 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [items, setItems] = useState("");
+  const [tagIds, setTagIds] = useState<MachineTagId[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [blurEditorOpen, setBlurEditorOpen] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addressLoading, setAddressLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,20 +49,34 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
     const file = e.target.files?.[0] ?? null;
     setImageFile(file);
     setPreview(file ? URL.createObjectURL(file) : null);
+    setPrivacyChecked(false);
+  };
+
+  const handleBlurApply = (file: File, previewUrl: string) => {
+    setImageFile(file);
+    setPreview(previewUrl);
+    setPrivacyChecked(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const toggleTag = (id: MachineTagId) => {
+    setTagIds((prev) =>
+      prev.includes(id) ? prev.filter((tagId) => tagId !== id) : [...prev, id]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imageFile) return;
+    if (!imageFile || !privacyChecked) return;
     setSaving(true);
-    await onSave(name.trim(), note.trim(), items.trim(), imageFile);
+    await onSave(name.trim(), note.trim(), formatMachineItems(tagIds, items), imageFile);
     setSaving(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-1">自販機を登録</h2>
           <p className="text-xs text-gray-400 mb-4">
             📍 {lat.toFixed(5)}, {lng.toFixed(5)}
@@ -97,14 +116,35 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                備考（任意）
+                支払い・特徴（任意）
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {MACHINE_TAG_OPTIONS.map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex min-h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={tagIds.includes(option.id)}
+                      onChange={() => toggleTag(option.id)}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                自由メモ（任意）
               </label>
               <textarea
                 value={items}
                 onChange={(e) => setItems(e.target.value)}
-                placeholder="例：24時間営業、現金のみ"
+                placeholder="例：100円商品あり、冬はホット多め"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                rows={3}
+                rows={2}
                 maxLength={200}
               />
             </div>
@@ -113,29 +153,56 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
                 写真 <span className="text-red-500">*</span>
               </label>
               {preview ? (
-                <div className="relative">
-                  <img
-                    src={preview}
-                    alt="プレビュー"
-                    className="w-full h-36 object-cover rounded-lg border border-gray-200"
-                  />
+                <div className="space-y-2">
+                  <div className="relative">
+                    <img
+                      src={preview}
+                      alt="プレビュー"
+                      className="w-full h-36 object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setPreview(null);
+                        setPrivacyChecked(false);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/70"
+                    >
+                      ✕
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setImageFile(null);
-                      setPreview(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black/70"
+                    onClick={() => setBlurEditorOpen(true)}
+                    className="w-full rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
                   >
-                    ✕
+                    写真の一部を隠す
                   </button>
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-900">
+                      投稿前に必ず確認してください
+                    </p>
+                    <p className="mt-1 text-xs text-amber-800">
+                      車のナンバー、人の顔、住所表札などが写っている場合は「写真の一部を隠す」でモザイクしてください。
+                    </p>
+                    <label className="mt-2 flex items-start gap-2 text-sm text-amber-950">
+                      <input
+                        type="checkbox"
+                        checked={privacyChecked}
+                        onChange={(e) => setPrivacyChecked(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-amber-600"
+                      />
+                      <span>写り込みを確認しました。必要な部分は隠しました。</span>
+                    </label>
+                  </div>
                 </div>
               ) : (
                 <label className="w-full border-2 border-dashed border-red-200 rounded-lg py-4 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-400 transition flex items-center justify-center gap-2 cursor-pointer">
                   📷 写真を追加（必須）
                   <input
-                    ref={fileInputRef}
+                ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleImageChange}
@@ -154,7 +221,7 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
               </button>
               <button
                 type="submit"
-                disabled={saving || !imageFile}
+                disabled={saving || !imageFile || !privacyChecked}
                 className="flex-1 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
               >
                 {saving ? "登録中..." : "登録する"}
@@ -163,6 +230,14 @@ export default function AddMachineModal({ lat, lng, onClose, onSave }: Props) {
           </form>
         </div>
       </div>
+      {blurEditorOpen && imageFile && preview && (
+        <PhotoBlurEditor
+          file={imageFile}
+          previewUrl={preview}
+          onApply={handleBlurApply}
+          onClose={() => setBlurEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }

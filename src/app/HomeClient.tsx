@@ -24,6 +24,7 @@ interface VendingMachine {
   items?: string;
   imageUrl?: string;
   photoUploadedAt?: string;
+  createdAt?: string;
   userId?: string;
 }
 
@@ -62,8 +63,18 @@ function mapMachineRow(row: Record<string, unknown>): VendingMachine {
     items: (row.items as string) ?? "",
     imageUrl: (row.image_url as string) ?? undefined,
     photoUploadedAt: (row.photo_uploaded_at as string) ?? undefined,
+    createdAt: (row.created_at as string) ?? undefined,
     userId: (row.user_id as string) ?? "",
   };
+}
+
+function toTokyoDateKey(date: string | Date): string {
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date));
 }
 
 export default function HomeClient({ machines: initialMachines, user }: Props) {
@@ -93,6 +104,10 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
     []
   );
   const isLoggedIn = !!currentUserId;
+  const todayCount = useMemo(() => {
+    const todayKey = toTokyoDateKey(new Date());
+    return machines.filter((machine) => machine.createdAt && toTokyoDateKey(machine.createdAt) === todayKey).length;
+  }, [machines]);
   const isAdmin = useMemo(() => {
     const email = normalizeEmail(currentUserEmail);
     const userId = currentUserId?.toLowerCase() ?? "";
@@ -103,6 +118,11 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       localPart === "ikedaiko1"
     );
   }, [adminEmails, adminUserIds, currentUserEmail, currentUserId]);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   useEffect(() => {
     const applyUser = (nextUser: User | null) => {
@@ -130,7 +150,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
   useEffect(() => {
     supabase
       .from("vending_machines")
-      .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at")
+      .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at, created_at")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) {
@@ -141,11 +161,6 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const uploadImage = async (file: File): Promise<string | null> => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -178,7 +193,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       const { data, error } = await supabase
         .from("vending_machines")
         .insert({ latitude: lat, longitude: lng, address: name, maker: note, items, user_id: currentUserId, image_url: imageUrl, ...(imageUrl ? { photo_uploaded_at: now } : {}) })
-        .select("id, address, latitude, longitude, maker, items, user_id, image_url")
+        .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at, created_at")
         .single();
 
       if (error) {
@@ -196,7 +211,8 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
             note: d["maker"] as string,
             items: d["items"] as string,
             imageUrl: (d["image_url"] as string) ?? undefined,
-            photoUploadedAt: imageUrl ? now : undefined,
+            photoUploadedAt: (d["photo_uploaded_at"] as string) ?? (imageUrl ? now : undefined),
+            createdAt: (d["created_at"] as string) ?? now,
             userId: d["user_id"] as string,
           },
           ...prev,
@@ -228,7 +244,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
         .from("vending_machines")
         .update(updatePayload)
         .eq("id", id)
-        .select("id, address, latitude, longitude, maker, items, image_url")
+        .select("id, address, latitude, longitude, maker, items, user_id, image_url, photo_uploaded_at, created_at")
         .single();
 
       if (error) {
@@ -248,7 +264,9 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
                   note: d["maker"] as string,
                   items: d["items"] as string,
                   imageUrl: (d["image_url"] as string) ?? undefined,
-                  photoUploadedAt: imageUrl ? now : m.photoUploadedAt,
+                  photoUploadedAt: (d["photo_uploaded_at"] as string) ?? (imageUrl ? now : m.photoUploadedAt),
+                  createdAt: (d["created_at"] as string) ?? m.createdAt,
+                  userId: (d["user_id"] as string) ?? m.userId,
                 }
               : m
           )
@@ -270,7 +288,7 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
       setMachines((prev) => prev.filter((m) => m.id !== id));
       showToast("削除しました");
     },
-    [supabase]
+    [supabase, showToast]
   );
 
   const handleSignOut = async () => {
@@ -287,6 +305,9 @@ export default function HomeClient({ machines: initialMachines, user }: Props) {
           <h1 className="font-bold text-gray-800 text-lg">自販機マップ</h1>
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
             {machines.length}件
+          </span>
+          <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            今日 {todayCount}件
           </span>
         </div>
         <div className="flex items-center gap-2">

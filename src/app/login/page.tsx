@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+
+const LOGIN_FAILED_MESSAGE = "ログインに失敗しました。もう一度お試しください。";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("error")) {
-      setErrorMessage("ログインに失敗しました。もう一度お試しください。");
-    }
-  }, []);
+  const [errorMessage, setErrorMessage] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("error")
+      ? LOGIN_FAILED_MESSAGE
+      : null;
+  });
 
   const handleGoogleLogin = async () => {
     if (loading) return;
